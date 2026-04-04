@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Teacher Khen's Phonics Board</title>
+    <style>
+        :root {
+            --chalkboard: #1b3022;
+            --wood: #4e342e;
+            --card-front: #ff9800;
+            --team1-color: #42a5f5;
+            --team2-color: #ef5350;
+        }
+
+        body {
+            margin: 0;
+            background: var(--chalkboard);
+            background-image: radial-gradient(rgba(255,255,255,0.05) 1px, transparent 1px);
+            background-size: 25px 25px;
+            font-family: 'Comic Sans MS', cursive;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            color: white;
+            overflow: hidden;
+            touch-action: manipulation;
+        }
+
+        .settings-bar {
+            width: 100%;
+            background: rgba(0,0,0,0.7);
+            padding: 8px;
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            flex-wrap: wrap;
+            z-index: 100;
+        }
+
+        input { padding: 6px; border-radius: 5px; border: none; width: 200px; font-size: 14px; }
+        .btn-small { padding: 6px 10px; border-radius: 5px; border: none; cursor: pointer; font-weight: bold; background: #ffca28; font-size: 12px; }
+        .btn-reset { background: #f44336 !important; color: white; }
+        select { padding: 6px; border-radius: 5px; background: white; cursor: pointer; }
+
+        #main-container {
+            display: flex;
+            flex-grow: 1;
+            width: 100%;
+            overflow: hidden;
+        }
+
+        .game-section {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            position: relative;
+            border-right: 2px dashed rgba(255,255,255,0.2);
+            min-width: 0;
+        }
+
+        .team-label {
+            text-align: center;
+            padding: 5px;
+            font-size: 18px;
+            font-weight: bold;
+            background: rgba(0,0,0,0.3);
+        }
+
+        .scoreboard {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+            background: rgba(255,255,255,0.1);
+            margin: 5px auto;
+            padding: 5px 15px;
+            border-radius: 20px;
+            width: fit-content;
+        }
+
+        .score-num { font-size: 24px; color: #ffeb3b; min-width: 30px; text-align: center; }
+        .score-btn { background: none; border: 1px solid white; color: white; border-radius: 50%; width: 25px; height: 25px; cursor: pointer; }
+
+        .board-area {
+            flex-grow: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-wrap: nowrap;
+            gap: 1%;
+            padding: 10px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        /* Card Sizing */
+        .card { 
+            perspective: 1000px; 
+            width: 110px; 
+            max-width: 18%; 
+            height: 180px; 
+            cursor: pointer; 
+            flex-shrink: 1; 
+        }
+        .card-front { background: var(--card-front); font-size: 2.5rem; }
+        .card-back { background: white; color: #333; transform: rotateY(180deg); font-size: 5rem; }
+        .final-word { font-size: 5rem; text-shadow: 3px 3px 0px #000; text-align: center; white-space: nowrap; }
+
+        /* Single Mode Overrides */
+        body.single-mode .card { width: 160px; height: 250px; flex-shrink: 0; max-width: none; }
+        body.single-mode .card-front { font-size: 70px; }
+        body.single-mode .card-back { font-size: 120px; }
+        body.single-mode .final-word { font-size: 160px; }
+        body.single-mode .game-section { border: none; }
+        body.single-mode .board-area { overflow-x: auto; }
+
+        .card-inner { position: relative; width: 100%; height: 100%; transition: transform 0.4s; transform-style: preserve-3d; }
+        .card.flipped .card-inner { transform: rotateY(180deg); }
+        .card-front, .card-back {
+            position: absolute; width: 100%; height: 100%; backface-visibility: hidden;
+            display: flex; align-items: center; justify-content: center;
+            border-radius: 12px; border: 4px solid white; box-shadow: 0 8px 15px rgba(0,0,0,0.4);
+        }
+
+        .controls { background: var(--wood); padding: 15px; display: flex; justify-content: center; gap: 10px; }
+        .main-btn { padding: 12px 20px; border: none; border-radius: 50px; font-size: 16px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 0 #222; }
+        .main-btn:active { transform: translateY(3px); box-shadow: none; }
+        .btn-nav { background: #4caf50; color: white; }
+        .btn-check { background: #ffeb3b; color: #333; }
+
+        .hidden { display: none !important; }
+
+        .star {
+            position: absolute; background: #ffeb3b; width: 12px; height: 12px;
+            clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+            pointer-events: none; animation: burst 1.2s ease-out forwards;
+        }
+        @keyframes burst { 0% { transform: translate(0, 0) scale(1); opacity: 1; } 100% { transform: translate(var(--tx), var(--ty)) scale(0); opacity: 0; } }
+    </style>
+</head>
+<body class="single-mode">
+
+<div class="settings-bar">
+    <input type="text" id="wordInput" placeholder="Enter words (cat, dog)...">
+    <button class="btn-small" onclick="registerWords()">Register</button>
+    <button class="btn-small" onclick="editCurrentWord()">✏️ Edit</button>
+    <select id="gameMode" onchange="toggleMode()">
+        <option value="single">Single Player</option>
+        <option value="team">Team Mode</option>
+    </select>
+    <select id="syncMode" class="hidden" onchange="handleSyncChange()">
+        <option value="on">Sync ON</option>
+        <option value="off">Sync OFF (Random)</option>
+    </select>
+    <button class="btn-small btn-save" onclick="exportData()">💾 Save</button>
+    <button class="btn-small btn-load" onclick="document.getElementById('fileInput').click()">📂 Load</button>
+    <input type="file" id="fileInput" class="hidden" onchange="importData(event)">
+    <button class="btn-small btn-reset" onclick="resetGame()">🔄 Reset Board</button>
+</div>
+
+<div id="main-container">
+    <div class="game-section" id="section-t1">
+        <div class="team-label hidden" id="label-t1">TEAM 1</div>
+        <div class="scoreboard hidden" id="score-t1">
+            <button class="score-btn" onclick="changeScore('t1', -1)">-</button>
+            <div class="score-num" id="val-t1">0</div>
+            <button class="score-btn" onclick="changeScore('t1', 1)">+</button>
+        </div>
+        <div class="board-area" id="board-t1"></div>
+        <div class="controls">
+            <button class="main-btn btn-nav" onclick="navWord('t1', -1)">◀ Back</button>
+            <button id="check-t1" class="main-btn btn-check hidden" onclick="checkWord('t1')">Check</button>
+            <button class="main-btn btn-nav" onclick="navWord('t1', 1)">Next ▶</button>
+        </div>
+    </div>
+
+    <div class="game-section hidden" id="section-t2">
+        <div class="team-label" style="color: var(--team2-color)">TEAM 2</div>
+        <div class="scoreboard" id="score-t2">
+            <button class="score-btn" onclick="changeScore('t2', -1)">-</button>
+            <div class="score-num" id="val-t2">0</div>
+            <button class="score-btn" onclick="changeScore('t2', 1)">+</button>
+        </div>
+        <div class="board-area" id="board-t2"></div>
+        <div class="controls">
+            <button class="main-btn btn-nav" onclick="navWord('t2', -1)">◀ Back</button>
+            <button id="check-t2" class="main-btn btn-check hidden" onclick="checkWord('t2')">Check</button>
+            <button class="main-btn btn-nav" onclick="navWord('t2', 1)">Next ▶</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    let wordList = [];
+    let state = { t1: { index: 0, score: 0 }, t2: { index: 0, score: 0 } };
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+    function playChimeSFX() {
+        [523, 659, 783].forEach((f, i) => {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.frequency.setValueAtTime(f, audioCtx.currentTime + (i * 0.1));
+            gain.gain.setValueAtTime(0.05, audioCtx.currentTime + (i * 0.1));
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
+            osc.connect(gain); gain.connect(audioCtx.destination);
+            osc.start(audioCtx.currentTime + (i * 0.1)); osc.stop(audioCtx.currentTime + 0.6);
+        });
+    }
+
+    function toggleMode() {
+        const mode = document.getElementById('gameMode').value;
+        const isTeam = mode === 'team';
+        document.body.classList.toggle('single-mode', !isTeam);
+        document.getElementById('section-t2').classList.toggle('hidden', !isTeam);
+        document.getElementById('syncMode').classList.toggle('hidden', !isTeam);
+        document.getElementById('score-t1').classList.toggle('hidden', !isTeam);
+        document.getElementById('label-t1').classList.toggle('hidden', !isTeam);
+        if (isTeam) { handleSyncChange(); }
+        renderWord('t1');
+    }
+
+    function handleSyncChange() {
+        const sync = document.getElementById('syncMode').value;
+        if(sync === 'off') {
+            state.t2.index = Math.floor(Math.random() * wordList.length);
+        }
+        renderWord('t2');
+    }
+
+    function changeScore(team, val) {
+        state[team].score = Math.max(0, state[team].score + val);
+        document.getElementById(`val-${team}`).innerText = state[team].score;
+    }
+
+    function registerWords() {
+        const val = document.getElementById('wordInput').value;
+        if (!val) return;
+        wordList = val.split(',').map(s => s.trim()).filter(s => s !== "");
+        state.t1.index = 0;
+        state.t2.index = Math.floor(Math.random() * wordList.length);
+        localStorage.setItem('phonicsWords', JSON.stringify(wordList));
+        renderWord('t1');
+        if(document.getElementById('gameMode').value === 'team') renderWord('t2');
+        document.getElementById('wordInput').value = "";
+    }
+
+    function renderWord(team) {
+        const sync = document.getElementById('syncMode').value;
+        const mode = document.getElementById('gameMode').value;
+        let idx = (team === 't2' && sync === 'on' && mode === 'team') ? state.t1.index : state[team].index;
+        let word = wordList[idx];
+        const board = document.getElementById(`board-${team}`);
+        board.innerHTML = "";
+        document.getElementById(`check-${team}`).classList.add('hidden');
+        if(!word) return;
+
+        word.split('').forEach(char => {
+            const card = document.createElement('div');
+            card.className = 'card';
+            card.innerHTML = `<div class="card-inner"><div class="card-front">?</div><div class="card-back">${char}</div></div>`;
+            card.addEventListener('pointerdown', (e) => {
+                e.preventDefault();
+                card.classList.toggle('flipped');
+                const all = board.querySelectorAll('.card');
+                const flipped = Array.from(all).every(c => c.classList.contains('flipped'));
+                document.getElementById(`check-${team}`).classList.toggle('hidden', !flipped);
+            });
+            board.appendChild(card);
+        });
+    }
+
+    function navWord(team, dir) {
+        const sync = document.getElementById('syncMode').value;
+        const mode = document.getElementById('gameMode').value;
+        if (mode === 'team' && sync === 'on') {
+            state.t1.index = (state.t1.index + dir + wordList.length) % wordList.length;
+            renderWord('t1');
+            renderWord('t2');
+        } else {
+            state[team].index = (state[team].index + dir + wordList.length) % wordList.length;
+            renderWord(team);
+        }
+    }
+
+    function checkWord(team) {
+        playChimeSFX();
+        const board = document.getElementById(`board-${team}`);
+        const sync = document.getElementById('syncMode').value;
+        const mode = document.getElementById('gameMode').value;
+        let idx = (team === 't2' && sync === 'on' && mode === 'team') ? state.t1.index : state[team].index;
+        board.innerHTML = `<div class="final-word">${wordList[idx]}</div>`;
+        document.getElementById(`check-${team}`).classList.add('hidden');
+        for(let i=0; i<30; i++) {
+            const s = document.createElement('div');
+            s.className = 'star';
+            const a = Math.random() * Math.PI * 2;
+            const v = 100 + Math.random() * 200;
+            s.style.setProperty('--tx', Math.cos(a)*v+'px');
+            s.style.setProperty('--ty', Math.sin(a)*v+'px');
+            s.style.left = '50%'; s.style.top = '50%';
+            board.appendChild(s);
+            setTimeout(() => s.remove(), 1200);
+        }
+    }
+
+    function editCurrentWord() {
+        if(wordList.length > 0) document.getElementById('wordInput').value = wordList.join(', ');
+    }
+
+    function exportData() {
+        const data = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(wordList));
+        const dl = document.createElement('a'); dl.href = data; dl.download = "lesson.json"; dl.click();
+    }
+
+    function importData(e) {
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+            wordList = JSON.parse(ev.target.result);
+            localStorage.setItem('phonicsWords', JSON.stringify(wordList));
+            state.t1.index = 0; renderWord('t1');
+        };
+        reader.readAsText(e.target.files[0]);
+    }
+
+    function resetGame() { if(confirm("Are you sure you want to clear all words?")) { localStorage.clear(); location.reload(); } }
+
+    window.onload = () => {
+        const saved = localStorage.getItem('phonicsWords');
+        if (saved) { wordList = JSON.parse(saved); renderWord('t1'); }
+    };
+</script>
+</body>
+</html>
