@@ -40,6 +40,7 @@
 
         input { padding: 6px; border-radius: 5px; border: none; width: 200px; font-size: 14px; }
         .btn-small { padding: 6px 10px; border-radius: 5px; border: none; cursor: pointer; font-weight: bold; background: #ffca28; font-size: 12px; }
+        .btn-toggle-cards { background: #00bcd4 !important; color: white; }
         .btn-reset { background: #f44336 !important; color: white; }
         select { padding: 6px; border-radius: 5px; background: white; cursor: pointer; }
 
@@ -48,6 +49,56 @@
             flex-grow: 1;
             width: 100%;
             overflow: hidden;
+            position: relative;
+        }
+
+        /* Drawing Canvas Layer */
+        #drawing-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1000;
+            pointer-events: none;
+            touch-action: none;
+        }
+
+        #drawing-canvas.active {
+            pointer-events: auto;
+            cursor: crosshair;
+        }
+
+        /* Pen Controls Popup Bar */
+        .pen-tools {
+            position: fixed;
+            bottom: 25px;
+            right: 95px;
+            background: rgba(0, 0, 0, 0.85);
+            border: 2px solid white;
+            border-radius: 30px;
+            padding: 6px 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            z-index: 1500;
+        }
+
+        .pen-size-btn {
+            background: #555;
+            color: white;
+            border: 1px solid white;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+
+        .pen-size-btn.active {
+            background: #ffca28;
+            color: black;
         }
 
         .game-section {
@@ -92,6 +143,13 @@
             padding: 10px;
             width: 100%;
             box-sizing: border-box;
+            transition: opacity 0.2s ease;
+        }
+
+        /* Visibility modifier class for hidden cards */
+        .cards-hidden .card, .cards-hidden .final-word {
+            visibility: hidden !important;
+            opacity: 0 !important;
         }
 
         /* Card Sizing */
@@ -102,10 +160,11 @@
             height: 180px; 
             cursor: pointer; 
             flex-shrink: 1; 
+            transition: opacity 0.2s ease, visibility 0.2s ease;
         }
         .card-front { background: var(--card-front); font-size: 2.5rem; }
         .card-back { background: white; color: #333; transform: rotateY(180deg); font-size: 5rem; }
-        .final-word { font-size: 5rem; text-shadow: 3px 3px 0px #000; text-align: center; white-space: nowrap; }
+        .final-word { font-size: 5rem; text-shadow: 3px 3px 0px #000; text-align: center; white-space: nowrap; transition: opacity 0.2s ease, visibility 0.2s ease; }
 
         /* Single Mode Overrides */
         body.single-mode .card { width: 160px; height: 250px; flex-shrink: 0; max-width: none; }
@@ -123,7 +182,7 @@
             border-radius: 12px; border: 4px solid white; box-shadow: 0 8px 15px rgba(0,0,0,0.4);
         }
 
-        .controls { background: var(--wood); padding: 15px; display: flex; justify-content: center; gap: 10px; }
+        .controls { background: var(--wood); padding: 15px; display: flex; justify-content: center; gap: 10px; z-index: 10; }
         .main-btn { padding: 12px 20px; border: none; border-radius: 50px; font-size: 16px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 0 #222; }
         .main-btn:active { transform: translateY(3px); box-shadow: none; }
         .btn-nav { background: #4caf50; color: white; }
@@ -137,6 +196,222 @@
             pointer-events: none; animation: burst 1.2s ease-out forwards;
         }
         @keyframes burst { 0% { transform: translate(0, 0) scale(1); opacity: 1; } 100% { transform: translate(var(--tx), var(--ty)) scale(0); opacity: 0; } }
+
+        /* Floating Action Buttons */
+        .floating-btn-container {
+            position: fixed;
+            bottom: 25px;
+            right: 25px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            z-index: 1500;
+        }
+
+        .floating-action-btn {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            color: white;
+            border: 3px solid white;
+            box-shadow: 0 6px 12px rgba(0,0,0,0.4);
+            font-size: 26px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.2s;
+        }
+        .floating-action-btn:hover { transform: scale(1.1); }
+        #btn-pen { background: #e91e63; }
+        #btn-pen.active { background: #4caf50; border-color: #ffeb3b; }
+        #btn-photo-drawer { background: #ab47bc; }
+        #btn-letter-drawer { background: #26a69a; }
+
+        /* Slide Drawers */
+        .side-drawer {
+            position: fixed;
+            right: -320px;
+            top: 0;
+            width: 300px;
+            height: 100%;
+            background: rgba(30, 30, 30, 0.95);
+            box-shadow: -5px 0 15px rgba(0,0,0,0.5);
+            z-index: 1600;
+            transition: right 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            padding: 15px;
+            box-sizing: border-box;
+        }
+
+        .side-drawer.open { right: 0; }
+
+        .drawer-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid #555;
+            padding-bottom: 10px;
+            margin-bottom: 10px;
+        }
+
+        .drawer-close {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+        }
+
+        #gallery-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            overflow-y: auto;
+            flex-grow: 1;
+            padding: 5px;
+        }
+
+        .gallery-thumb-container {
+            position: relative;
+            display: inline-block;
+        }
+
+        .gallery-thumb {
+            width: 100%;
+            height: 100px;
+            object-fit: cover;
+            border-radius: 8px;
+            border: 2px solid #fff;
+            cursor: pointer;
+            transition: transform 0.2s;
+            box-sizing: border-box;
+        }
+        .gallery-thumb:hover { transform: scale(1.05); }
+
+        .thumb-delete-btn {
+            position: absolute;
+            top: 2px;
+            right: 2px;
+            background: rgba(244, 67, 54, 0.9);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            font-size: 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Alphabet Grid */
+        #letter-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+            overflow-y: auto;
+            flex-grow: 1;
+            padding: 5px;
+        }
+
+        .letter-tile {
+            background: #ff9800;
+            color: white;
+            border: 2px solid white;
+            border-radius: 8px;
+            font-size: 24px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 50px;
+            cursor: pointer;
+            user-select: none;
+        }
+        .letter-tile:hover { background: #ffa726; }
+
+        /* Draggable Overlay Items */
+        .draggable-wrapper {
+            position: absolute;
+            z-index: 500;
+            cursor: move;
+            display: inline-block;
+            user-select: none;
+            touch-action: none;
+            width: 160px;
+            height: 160px;
+            min-width: 60px;
+            min-height: 60px;
+        }
+
+        .draggable-wrapper img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            border: 4px solid white;
+            border-radius: 12px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+            pointer-events: none;
+            box-sizing: border-box;
+            background: rgba(0,0,0,0.2);
+        }
+
+        .draggable-letter {
+            width: 100%;
+            height: 100%;
+            border: 4px solid white;
+            border-radius: 12px;
+            background: #26a69a;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 100px;
+            font-weight: bold;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+            box-sizing: border-box;
+            pointer-events: none;
+            line-height: 1;
+        }
+
+        .overlay-delete-btn {
+            position: absolute;
+            top: -10px;
+            right: -10px;
+            background: #f44336;
+            color: white;
+            border: 2px solid white;
+            border-radius: 50%;
+            width: 26px;
+            height: 26px;
+            font-weight: bold;
+            font-size: 14px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+            pointer-events: auto;
+            z-index: 10;
+        }
+
+        .overlay-resize-handle {
+            position: absolute;
+            bottom: -8px;
+            right: -8px;
+            width: 24px;
+            height: 24px;
+            background: #ffca28;
+            border: 2px solid white;
+            border-radius: 50%;
+            cursor: nwse-resize;
+            touch-action: none;
+            z-index: 10;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+        }
     </style>
 </head>
 <body class="single-mode">
@@ -145,6 +420,7 @@
     <input type="text" id="wordInput" placeholder="Enter words (cat, dog)...">
     <button class="btn-small" onclick="registerWords()">Register</button>
     <button class="btn-small" onclick="editCurrentWord()">✏️ Edit</button>
+    <button class="btn-small btn-toggle-cards" id="btnToggleCards" onclick="toggleCardVisibility()">👁️ Hide Cards</button>
     <select id="gameMode" onchange="toggleMode()">
         <option value="single">Single Player</option>
         <option value="team">Team Mode</option>
@@ -160,6 +436,8 @@
 </div>
 
 <div id="main-container">
+    <canvas id="drawing-canvas"></canvas>
+
     <div class="game-section" id="section-t1">
         <div class="team-label hidden" id="label-t1">TEAM 1</div>
         <div class="scoreboard hidden" id="score-t1">
@@ -191,10 +469,119 @@
     </div>
 </div>
 
+<div id="pen-tools" class="pen-tools hidden">
+    <button class="pen-size-btn active" style="width: 25px; height: 25px; font-size: 10px;" onclick="setPenSize(3, this)">S</button>
+    <button class="pen-size-btn" style="width: 32px; height: 32px; font-size: 12px;" onclick="setPenSize(8, this)">M</button>
+    <button class="pen-size-btn" style="width: 38px; height: 38px; font-size: 14px;" onclick="setPenSize(16, this)">L</button>
+    <button class="btn-small btn-reset" style="padding: 4px 8px; margin-left: 5px;" onclick="clearCanvas()">🗑️ Clear</button>
+</div>
+
+<div class="floating-btn-container">
+    <button class="floating-action-btn" id="btn-pen" onclick="togglePen()">✏️</button>
+    <button class="floating-action-btn" id="btn-letter-drawer" onclick="toggleDrawer('letter-drawer')">🔤</button>
+    <button class="floating-action-btn" id="btn-photo-drawer" onclick="toggleDrawer('img-drawer')">🖼️</button>
+</div>
+
+<div id="img-drawer" class="side-drawer">
+    <div class="drawer-header">
+        <h3 style="margin: 0; font-size: 18px;">Picture Bank</h3>
+        <button class="drawer-close" onclick="toggleDrawer('img-drawer')">✕</button>
+    </div>
+    <button class="btn-small" style="width: 100%; margin-bottom: 12px; padding: 10px; background: #4caf50; color: white;" onclick="document.getElementById('img-upload-input').click()">➕ Upload Pictures</button>
+    <input type="file" id="img-upload-input" accept="image/*" multiple class="hidden" onchange="handleImageUpload(event)">
+    <div id="gallery-grid"></div>
+</div>
+
+<div id="letter-drawer" class="side-drawer">
+    <div class="drawer-header">
+        <h3 style="margin: 0; font-size: 18px;">Alphabet Bank</h3>
+        <button class="drawer-close" onclick="toggleDrawer('letter-drawer')">✕</button>
+    </div>
+    <div style="display: flex; gap: 10px; margin-bottom: 12px;">
+        <button class="btn-small" style="flex: 1; padding: 8px;" onclick="setLetterCase('upper')">ABC (Big)</button>
+        <button class="btn-small" style="flex: 1; padding: 8px;" onclick="setLetterCase('lower')">abc (Small)</button>
+    </div>
+    <div id="letter-grid"></div>
+</div>
+
 <script>
     let wordList = [];
     let state = { t1: { index: 0, score: 0 }, t2: { index: 0, score: 0 } };
+    let photoStore = [];
+    let activeBoardOverlays = [];
+    let currentLetterCase = 'upper';
+    let cardsAreHidden = false;
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+    /* Canvas Pen Logic */
+    let isDrawingMode = false;
+    let isDrawing = false;
+    let currentPenSize = 3;
+    let canvas, ctx;
+
+    function initCanvas() {
+        canvas = document.getElementById('drawing-canvas');
+        ctx = canvas.getContext('2d');
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+
+        canvas.addEventListener('pointerdown', startDrawing);
+        canvas.addEventListener('pointermove', draw);
+        canvas.addEventListener('pointerup', stopDrawing);
+        canvas.addEventListener('pointercancel', stopDrawing);
+    }
+
+    function resizeCanvas() {
+        if (!canvas) return;
+        const tempImage = ctx ? ctx.getImageData(0, 0, canvas.width, canvas.height) : null;
+        const container = document.getElementById('main-container');
+        canvas.width = container.clientWidth;
+        canvas.height = container.clientHeight;
+        if (tempImage) ctx.putImageData(tempImage, 0, 0);
+    }
+
+    function togglePen() {
+        isDrawingMode = !isDrawingMode;
+        const btn = document.getElementById('btn-pen');
+        const penTools = document.getElementById('pen-tools');
+        canvas.classList.toggle('active', isDrawingMode);
+        btn.classList.toggle('active', isDrawingMode);
+        penTools.classList.toggle('hidden', !isDrawingMode);
+    }
+
+    function setPenSize(size, el) {
+        currentPenSize = size;
+        document.querySelectorAll('.pen-size-btn').forEach(b => b.classList.remove('active'));
+        el.classList.add('active');
+    }
+
+    function clearCanvas() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+
+    function startDrawing(e) {
+        if (!isDrawingMode) return;
+        isDrawing = true;
+        const rect = canvas.getBoundingClientRect();
+        ctx.beginPath();
+        ctx.moveTo(e.clientX - rect.left, e.clientY - rect.top);
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = currentPenSize;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+    }
+
+    function draw(e) {
+        if (!isDrawing || !isDrawingMode) return;
+        e.preventDefault();
+        const rect = canvas.getBoundingClientRect();
+        ctx.lineTo(e.clientX - rect.left, e.clientY - rect.top);
+        ctx.stroke();
+    }
+
+    function stopDrawing() {
+        isDrawing = false;
+    }
 
     function playChimeSFX() {
         [523, 659, 783].forEach((f, i) => {
@@ -239,10 +626,20 @@
         wordList = val.split(',').map(s => s.trim()).filter(s => s !== "");
         state.t1.index = 0;
         state.t2.index = Math.floor(Math.random() * wordList.length);
-        localStorage.setItem('phonicsWords', JSON.stringify(wordList));
+        saveToLocalStorage();
         renderWord('t1');
         if(document.getElementById('gameMode').value === 'team') renderWord('t2');
         document.getElementById('wordInput').value = "";
+    }
+
+    function toggleCardVisibility() {
+        cardsAreHidden = !cardsAreHidden;
+        const btn = document.getElementById('btnToggleCards');
+        document.getElementById('board-t1').classList.toggle('cards-hidden', cardsAreHidden);
+        document.getElementById('board-t2').classList.toggle('cards-hidden', cardsAreHidden);
+        
+        btn.innerText = cardsAreHidden ? "👁️ Show Cards" : "👁️ Hide Cards";
+        btn.style.background = cardsAreHidden ? "#ff9800" : "#00bcd4";
     }
 
     function renderWord(team) {
@@ -308,26 +705,303 @@
         if(wordList.length > 0) document.getElementById('wordInput').value = wordList.join(', ');
     }
 
+    function saveToLocalStorage() {
+        try {
+            localStorage.setItem('phonicsWords', JSON.stringify(wordList));
+            localStorage.setItem('phonicsPhotos', JSON.stringify(photoStore));
+            localStorage.setItem('phonicsOverlays', JSON.stringify(activeBoardOverlays));
+        } catch(e) {
+            console.warn("Storage quota exceeded. Save using the Save file button instead.");
+        }
+    }
+
     function exportData() {
-        const data = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(wordList));
-        const dl = document.createElement('a'); dl.href = data; dl.download = "lesson.json"; dl.click();
+        const exportObj = { 
+            words: wordList, 
+            photos: photoStore,
+            overlays: activeBoardOverlays 
+        };
+        const data = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(exportObj));
+        const dl = document.createElement('a'); dl.href = data; dl.download = "phonics_lesson.json"; dl.click();
     }
 
     function importData(e) {
         const reader = new FileReader();
         reader.onload = (ev) => {
-            wordList = JSON.parse(ev.target.result);
-            localStorage.setItem('phonicsWords', JSON.stringify(wordList));
-            state.t1.index = 0; renderWord('t1');
+            try {
+                const parsed = JSON.parse(ev.target.result);
+                if (Array.isArray(parsed)) {
+                    wordList = parsed;
+                    photoStore = [];
+                    activeBoardOverlays = [];
+                } else {
+                    wordList = parsed.words || [];
+                    photoStore = parsed.photos || [];
+                    activeBoardOverlays = parsed.overlays || [];
+                }
+                saveToLocalStorage();
+                renderGallery();
+                restoreBoardOverlays();
+                state.t1.index = 0; 
+                renderWord('t1');
+            } catch(err) {
+                alert("Invalid lesson file.");
+            }
         };
         reader.readAsText(e.target.files[0]);
     }
 
-    function resetGame() { if(confirm("Are you sure you want to clear all words?")) { localStorage.clear(); location.reload(); } }
+    function resetGame() { if(confirm("Are you sure you want to clear all words and photos?")) { localStorage.clear(); location.reload(); } }
+
+    /* Drawer Controls */
+    function toggleDrawer(id) {
+        const drawer = document.getElementById(id);
+        const isOpen = drawer.classList.contains('open');
+        document.querySelectorAll('.side-drawer').forEach(d => d.classList.remove('open'));
+        if (!isOpen) drawer.classList.add('open');
+    }
+
+    /* Photo Logic */
+    function handleImageUpload(e) {
+        const files = Array.from(e.target.files);
+        let loaded = 0;
+        files.forEach(file => {
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                photoStore.push(ev.target.result);
+                loaded++;
+                if (loaded === files.length) {
+                    saveToLocalStorage();
+                    renderGallery();
+                }
+            };
+            reader.readAsDataURL(file);
+        });
+        e.target.value = "";
+    }
+
+    function renderGallery() {
+        const grid = document.getElementById('gallery-grid');
+        grid.innerHTML = "";
+        photoStore.forEach((src, idx) => {
+            const container = document.createElement('div');
+            container.className = 'gallery-thumb-container';
+
+            const img = document.createElement('img');
+            img.src = src;
+            img.className = 'gallery-thumb';
+            img.onclick = () => createNewOverlay('photo', src);
+
+            const del = document.createElement('button');
+            del.className = 'thumb-delete-btn';
+            del.innerText = '✕';
+            del.onclick = (e) => {
+                e.stopPropagation();
+                photoStore.splice(idx, 1);
+                saveToLocalStorage();
+                renderGallery();
+            };
+
+            container.appendChild(img);
+            container.appendChild(del);
+            grid.appendChild(container);
+        });
+    }
+
+    /* Alphabet Logic */
+    function setLetterCase(caseType) {
+        currentLetterCase = caseType;
+        renderAlphabet();
+    }
+
+    function renderAlphabet() {
+        const grid = document.getElementById('letter-grid');
+        grid.innerHTML = "";
+        const start = currentLetterCase === 'upper' ? 65 : 97;
+        for (let i = 0; i < 26; i++) {
+            const char = String.fromCharCode(start + i);
+            const tile = document.createElement('div');
+            tile.className = 'letter-tile';
+            tile.innerText = char;
+            tile.onclick = () => createNewOverlay('letter', char);
+            grid.appendChild(tile);
+        }
+    }
+
+    /* Overlay Spawning & Persistence Engine */
+    function createNewOverlay(type, content) {
+        const overlayData = {
+            id: 'overlay-' + Date.now() + '-' + Math.random().toString(36).substr(2, 4),
+            type: type,
+            content: content,
+            left: '35%',
+            top: '25%',
+            width: '160px',
+            height: '160px',
+            transform: 'translate3d(0px, 0px, 0px)',
+            x: 0,
+            y: 0
+        };
+        activeBoardOverlays.push(overlayData);
+        saveToLocalStorage();
+        buildOverlayElement(overlayData);
+        toggleDrawer(type === 'photo' ? 'img-drawer' : 'letter-drawer');
+    }
+
+    function restoreBoardOverlays() {
+        document.querySelectorAll('.draggable-wrapper').forEach(el => el.remove());
+        activeBoardOverlays.forEach(overlayData => {
+            buildOverlayElement(overlayData);
+        });
+    }
+
+    function buildOverlayElement(overlayData) {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'draggable-wrapper';
+        wrapper.id = overlayData.id;
+        wrapper.style.left = overlayData.left;
+        wrapper.style.top = overlayData.top;
+        wrapper.style.width = overlayData.width;
+        wrapper.style.height = overlayData.height;
+        wrapper.style.transform = overlayData.transform;
+
+        let childElement;
+        if (overlayData.type === 'photo') {
+            childElement = document.createElement('img');
+            childElement.src = overlayData.content;
+        } else {
+            childElement = document.createElement('div');
+            childElement.className = 'draggable-letter';
+            childElement.innerText = overlayData.content;
+        }
+
+        const delBtn = document.createElement('button');
+        delBtn.className = 'overlay-delete-btn';
+        delBtn.innerText = '✕';
+        delBtn.onclick = (e) => {
+            e.stopPropagation();
+            wrapper.remove();
+            activeBoardOverlays = activeBoardOverlays.filter(item => item.id !== overlayData.id);
+            saveToLocalStorage();
+        };
+
+        const resizeHandle = document.createElement('div');
+        resizeHandle.className = 'overlay-resize-handle';
+
+        wrapper.appendChild(childElement);
+        wrapper.appendChild(delBtn);
+        wrapper.appendChild(resizeHandle);
+        document.getElementById('main-container').appendChild(wrapper);
+
+        makeDraggableAndResizable(wrapper, resizeHandle, overlayData.type === 'letter' ? childElement : null, overlayData);
+    }
+
+    /* Universal Move & Resize Engine */
+    function makeDraggableAndResizable(element, resizeHandle, targetTextElement = null, overlayData = null) {
+        let activeDrag = false;
+        let activeResize = false;
+        let currentX = overlayData ? (overlayData.x || 0) : 0;
+        let currentY = overlayData ? (overlayData.y || 0) : 0;
+        let initialX, initialY;
+        let startWidth, startHeight, startMouseX, startMouseY;
+
+        if (targetTextElement) {
+            updateFontSize(element.offsetWidth, element.offsetHeight);
+        }
+
+        element.addEventListener('pointerdown', dragStart);
+        resizeHandle.addEventListener('pointerdown', resizeStart);
+
+        function updateFontSize(width, height) {
+            if (targetTextElement) {
+                const minDim = Math.min(width, height);
+                targetTextElement.style.fontSize = Math.floor(minDim * 0.7) + 'px';
+            }
+        }
+
+        function dragStart(e) {
+            if (e.target.classList.contains('overlay-delete-btn') || e.target.classList.contains('overlay-resize-handle')) return;
+            initialX = e.clientX - currentX;
+            initialY = e.clientY - currentY;
+            activeDrag = true;
+            element.setPointerCapture(e.pointerId);
+            element.addEventListener('pointermove', drag);
+            element.addEventListener('pointerup', dragEnd);
+        }
+
+        function drag(e) {
+            if (activeDrag) {
+                e.preventDefault();
+                currentX = e.clientX - initialX;
+                currentY = e.clientY - initialY;
+                element.style.transform = `translate3d(${currentX}px, ${currentY}px, 0)`;
+            }
+        }
+
+        function dragEnd(e) {
+            activeDrag = false;
+            element.releasePointerCapture(e.pointerId);
+            element.removeEventListener('pointermove', drag);
+            element.removeEventListener('pointerup', dragEnd);
+            
+            if (overlayData) {
+                overlayData.x = currentX;
+                overlayData.y = currentY;
+                overlayData.transform = element.style.transform;
+                saveToLocalStorage();
+            }
+        }
+
+        function resizeStart(e) {
+            e.stopPropagation();
+            e.preventDefault();
+            activeResize = true;
+            startWidth = element.offsetWidth;
+            startHeight = element.offsetHeight;
+            startMouseX = e.clientX;
+            startMouseY = e.clientY;
+            resizeHandle.setPointerCapture(e.pointerId);
+            resizeHandle.addEventListener('pointermove', resizing);
+            resizeHandle.addEventListener('pointerup', resizeEnd);
+        }
+
+        function resizing(e) {
+            if (activeResize) {
+                e.preventDefault();
+                const newWidth = Math.max(60, startWidth + (e.clientX - startMouseX));
+                const newHeight = Math.max(60, startHeight + (e.clientY - startMouseY));
+                element.style.width = newWidth + 'px';
+                element.style.height = newHeight + 'px';
+                updateFontSize(newWidth, newHeight);
+            }
+        }
+
+        function resizeEnd(e) {
+            activeResize = false;
+            resizeHandle.releasePointerCapture(e.pointerId);
+            resizeHandle.removeEventListener('pointermove', resizing);
+            resizeHandle.removeEventListener('pointerup', resizeEnd);
+
+            if (overlayData) {
+                overlayData.width = element.style.width;
+                overlayData.height = element.style.height;
+                saveToLocalStorage();
+            }
+        }
+    }
 
     window.onload = () => {
-        const saved = localStorage.getItem('phonicsWords');
-        if (saved) { wordList = JSON.parse(saved); renderWord('t1'); }
+        initCanvas();
+        const savedWords = localStorage.getItem('phonicsWords');
+        if (savedWords) { wordList = JSON.parse(savedWords); renderWord('t1'); }
+        
+        const savedPhotos = localStorage.getItem('phonicsPhotos');
+        if (savedPhotos) { photoStore = JSON.parse(savedPhotos); renderGallery(); }
+
+        const savedOverlays = localStorage.getItem('phonicsOverlays');
+        if (savedOverlays) { activeBoardOverlays = JSON.parse(savedOverlays); restoreBoardOverlays(); }
+
+        renderAlphabet();
     };
 </script>
 </body>
