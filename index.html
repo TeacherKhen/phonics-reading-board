@@ -223,10 +223,42 @@
             transition: transform 0.2s;
         }
         .floating-action-btn:hover { transform: scale(1.1); }
+        #btn-music { background: #ff5722; }
         #btn-pen { background: #e91e63; }
         #btn-pen.active { background: #4caf50; border-color: #ffeb3b; }
         #btn-photo-drawer { background: #ab47bc; }
         #btn-letter-drawer { background: #26a69a; }
+
+        /* Music Controls Toolbar */
+        .music-tools {
+            position: fixed;
+            bottom: 220px;
+            right: 95px;
+            background: rgba(0, 0, 0, 0.9);
+            border: 2px solid white;
+            border-radius: 20px;
+            padding: 10px 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            z-index: 1500;
+        }
+
+        .music-btn {
+            background: #ffca28;
+            color: black;
+            border: none;
+            border-radius: 5px;
+            padding: 6px 10px;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .music-slider {
+            width: 80px;
+            cursor: pointer;
+        }
 
         /* Slide Drawers */
         .side-drawer {
@@ -333,7 +365,7 @@
         }
         .letter-tile:hover { background: #ffa726; }
 
-        /* Draggable Overlay Items */
+        /* Draggable Overlay Items - NO BORDERS */
         .draggable-wrapper {
             position: absolute;
             z-index: 500;
@@ -351,30 +383,31 @@
             width: 100%;
             height: 100%;
             object-fit: contain;
-            border: 4px solid white;
-            border-radius: 12px;
-            box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+            border: none;
+            border-radius: 0;
+            box-shadow: none;
             pointer-events: none;
             box-sizing: border-box;
-            background: rgba(0,0,0,0.2);
+            background: transparent;
         }
 
         .draggable-letter {
             width: 100%;
             height: 100%;
-            border: 4px solid white;
-            border-radius: 12px;
-            background: #26a69a;
+            border: none;
+            border-radius: 0;
+            background: transparent;
             color: white;
             display: flex;
             align-items: center;
             justify-content: center;
             font-size: 100px;
             font-weight: bold;
-            box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+            box-shadow: none;
             box-sizing: border-box;
             pointer-events: none;
             line-height: 1;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.6);
         }
 
         .overlay-delete-btn {
@@ -415,6 +448,8 @@
     </style>
 </head>
 <body class="single-mode">
+
+<audio id="bg-audio" src="music.mp3" loop></audio>
 
 <div class="settings-bar">
     <input type="text" id="wordInput" placeholder="Enter words (cat, dog)...">
@@ -469,6 +504,17 @@
     </div>
 </div>
 
+<!-- Music Controls Popup Bar -->
+<div id="music-tools" class="music-tools hidden">
+    <button class="music-btn" id="btn-play-music" onclick="togglePlayMusic()">▶️ Play</button>
+    <button class="music-btn" onclick="stopMusic()">⏹️ Stop</button>
+    <span style="font-size: 12px; margin-left: 5px;">🔊</span>
+    <input type="range" class="music-slider" id="music-volume" min="0" max="1" step="0.05" value="0.5" oninput="changeVolume(this.value)">
+    <button class="music-btn" style="background: #4caf50; color: white;" onclick="document.getElementById('music-file-input').click()">📁</button>
+    <input type="file" id="music-file-input" accept="audio/*" class="hidden" onchange="loadMusicFile(event)">
+</div>
+
+<!-- Pen Controls Popup Bar -->
 <div id="pen-tools" class="pen-tools hidden">
     <button class="pen-size-btn active" style="width: 25px; height: 25px; font-size: 10px;" onclick="setPenSize(3, this)">S</button>
     <button class="pen-size-btn" style="width: 32px; height: 32px; font-size: 12px;" onclick="setPenSize(8, this)">M</button>
@@ -476,12 +522,15 @@
     <button class="btn-small btn-reset" style="padding: 4px 8px; margin-left: 5px;" onclick="clearCanvas()">🗑️ Clear</button>
 </div>
 
+<!-- Floating Action Buttons -->
 <div class="floating-btn-container">
+    <button class="floating-action-btn" id="btn-music" onclick="toggleMusicTools()">🎵</button>
     <button class="floating-action-btn" id="btn-pen" onclick="togglePen()">✏️</button>
     <button class="floating-action-btn" id="btn-letter-drawer" onclick="toggleDrawer('letter-drawer')">🔤</button>
     <button class="floating-action-btn" id="btn-photo-drawer" onclick="toggleDrawer('img-drawer')">🖼️</button>
 </div>
 
+<!-- Photo Drawer -->
 <div id="img-drawer" class="side-drawer">
     <div class="drawer-header">
         <h3 style="margin: 0; font-size: 18px;">Picture Bank</h3>
@@ -492,6 +541,7 @@
     <div id="gallery-grid"></div>
 </div>
 
+<!-- Alphabet Drawer -->
 <div id="letter-drawer" class="side-drawer">
     <div class="drawer-header">
         <h3 style="margin: 0; font-size: 18px;">Alphabet Bank</h3>
@@ -512,6 +562,47 @@
     let currentLetterCase = 'upper';
     let cardsAreHidden = false;
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+    /* Music Player Controls */
+    const bgAudio = document.getElementById('bg-audio');
+
+    function toggleMusicTools() {
+        const musicTools = document.getElementById('music-tools');
+        musicTools.classList.toggle('hidden');
+    }
+
+    function togglePlayMusic() {
+        const playBtn = document.getElementById('btn-play-music');
+        if (bgAudio.paused) {
+            bgAudio.play().then(() => {
+                playBtn.innerText = "⏸️ Pause";
+            }).catch(e => {
+                alert("Please make sure 'music.mp3' is in the same folder or upload a music file with 📁 button.");
+            });
+        } else {
+            bgAudio.pause();
+            playBtn.innerText = "▶️ Play";
+        }
+    }
+
+    function stopMusic() {
+        bgAudio.pause();
+        bgAudio.currentTime = 0;
+        document.getElementById('btn-play-music').innerText = "▶️ Play";
+    }
+
+    function changeVolume(val) {
+        bgAudio.volume = val;
+    }
+
+    function loadMusicFile(e) {
+        const file = e.target.files[0];
+        if (file) {
+            bgAudio.src = URL.createObjectURL(file);
+            stopMusic();
+            togglePlayMusic();
+        }
+    }
 
     /* Canvas Pen Logic */
     let isDrawingMode = false;
